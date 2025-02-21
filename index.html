@@ -2,24 +2,27 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>设为壁纸(分预览/实际路径)</title>
+  <title>设为壁纸</title>
   <style>
     /* 全局样式 */
     body {
-      margin: 0;
-      padding: 0;
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
-      background: #f8f9fa;
-      color: #333;
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: #1d1d1d;
+    color: #8094ba;
+    /* 可选：设置最小窗口宽度 */
+    min-width: 600px;
     }
     .container {
-      max-width: 860px;
-      margin: 20px auto;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 20px 30px;
-    }
+    max-width: 600px;
+    min-width: 600px;  /* 设置最小宽度，确保内容完整显示 */
+    margin: 20px auto;
+    background: #1b1f2a;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 20px 30px;
+  }
     h2 {
       margin-top: 0;
       font-weight: 600;
@@ -36,7 +39,7 @@
       border: 1px solid #ddd;
       border-radius: 6px;
       padding: 4px;
-      background-color: #fff;
+      background-color: #000000;
     }
 
     /* 多显示器 */
@@ -45,11 +48,12 @@
       justify-content: center;
       margin: 20px 0;
     }
+    /* 多显示器画布 */
     .monitors-map {
       position: relative;
-      width: 600px;
+      width: 100%;   /* 宽度自适应容器 */
       height: 400px;
-      background: #f0f3f5;
+      background: #000000;
       border: 1px solid #ccc;
       border-radius: 8px;
       overflow: hidden;
@@ -79,7 +83,7 @@
     }
     .monitor-label {
       font-weight: 600;
-      color: #495057;
+      color: #ff0000;
       pointer-events: none;
       z-index: 1;
     }
@@ -123,18 +127,31 @@
     .hidden {
       display: none !important;
     }
+    #fillModeSelect {
+      background-color: #000000;   /* 深色背景 */
+      color: #fff;              /* 白色文字 */
+      border: 1px solid #444;
+      padding: 6px 10px;
+      border-radius: 4px;
+      -webkit-appearance: none; /* 去除部分浏览器默认样式 */
+      -moz-appearance: none;
+      appearance: none;
+    }
+    #fillModeSelect:focus {
+      border-color: #007BFF; /* 添加焦点状态样式 */
+      outline: none;         /* 去掉默认的焦点边框 */
+    }
   </style>
   <script src="js/plugin.js"></script>
 </head>
 <body>
   <div class="container">
-    <h2>设为壁纸(分预览/实际路径)</h2>
 
     <!-- 显示选中的图片(顶上小图) -->
     <div class="selected-image-box hidden" id="imageContainer">
       <div>
-        <strong>当前图片：</strong>
-        <img id="selectedImage" src="" alt="预览" />
+        <!-- <strong>当前图片：</strong>
+        <img id="selectedImage" src="" alt="预览" /> -->
       </div>
     </div>
 
