@@ -80,6 +80,7 @@
     .monitor-box.selected {
       border-color: #007BFF;
       box-shadow: 0 0 8px rgba(0,123,255,0.5);
+      border: 4px solid #007BFF !important; /* 修正了 border 属性 */
     }
     .monitor-label {
       font-weight: 600;
@@ -92,8 +93,9 @@
     .toolbar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       margin: 20px 0;
+      gap: 10px;
     }
     .toolbar .fill-mode {
       display: flex;
@@ -141,6 +143,11 @@
       border-color: #007BFF; /* 添加焦点状态样式 */
       outline: none;         /* 去掉默认的焦点边框 */
     }
+    .info-text {
+      margin-left: auto;
+      color: #ffcccc;
+      font-size: 12px;
+    }
   </style>
   <script src="js/plugin.js"></script>
 </head>
@@ -165,13 +172,16 @@
       <div class="fill-mode">
         <label for="fillModeSelect"><strong>填充方式:</strong></label>
         <select id="fillModeSelect">
-          <option value="fill" selected>填充(宽100%)</option>
-          <option value="stretch">拉伸(100% 100%)</option>
+          <option value="fill" selected>填充</option>
+          <option value="stretch">拉伸</option>
           <option value="fit">适应</option>
-          <option value="center">居中(原图)</option>
-          <option value="tile">平铺(原图)</option>
+          <option value="center">居中</option>
+          <option value="tile">平铺</option>
           <option value="span">跨区</option>
         </select>
+      </div>
+      <div class="info-text">
+        <small>目前 Windows 不支持单独设置显示器和填充方式, 所以mac也懒得做了</small>
       </div>
       <div class="buttons">
         <button id="confirmBtn">确 定</button>

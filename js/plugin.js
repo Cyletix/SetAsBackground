@@ -208,6 +208,7 @@ eagle.onPluginShow(async () => {
     // 取消按钮 -> 隐藏窗口
     cancelBtn.onclick = () => {
       eagle.window.hide();
+	  clearInterval(pollingTimer);
     };
 
     function refreshAllSelectedBoxes() {
