@@ -1,19 +1,20 @@
-const { exec } = require('child_process');
-const path = require('path');
+param(
+    [int]$monitorIndex,
+    [string]$wallpaperPath
+)
 
-// 指定要设置的显示器索引和壁纸文件路径
-const monitorIndex = 0; // 假设要设置第一个显示器
-const wallpaperPath = 'C:\\Path\\To\\Your\\wallpaper.jpg';
+Write-Output "调试输出：monitorIndex = $monitorIndex, wallpaperPath = $wallpaperPath"  # 调试用
 
-// 构造 PowerShell 调用命令
-const psScriptPath = path.join(__dirname, 'setWallpaper.ps1');
-const cmd = `powershell.exe -ExecutionPolicy Bypass -File "${psScriptPath}" ${monitorIndex} "${wallpaperPath}"`;
+# 创建 IDesktopWallpaper COM 对象
+$desktopWallpaper = New-Object -ComObject DesktopWallpaper
 
-// 执行脚本
-exec(cmd, (error, stdout, stderr) => {
-  if (error) {
-    console.error(`调用出错: ${error}`);
-    return;
-  }
-  console.log(`输出: ${stdout}`);
-});
+# 获取指定显示器的 ID
+$monitorId = $desktopWallpaper.GetMonitorDevicePathAt($monitorIndex)
+if (-not $monitorId) {
+    Write-Error "未能获取显示器索引 $monitorIndex 对应的 ID"
+    exit 1
+}
+
+# 设置该显示器的壁纸
+$desktopWallpaper.SetWallpaper($monitorId, $wallpaperPath)
+Write-Output "已成功设置显示器 $monitorIndex 的壁纸为：$wallpaperPath"
