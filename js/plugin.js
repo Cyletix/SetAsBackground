@@ -10,10 +10,13 @@
 const wallpaper = require("wallpaper");
 
 let globalSelection = [];
+let lastActivatedMonitor = null; // 记录最后激活的显示器 DOM
+let cachedPreviewUrl = "";        // 用于轮询更新的全局预览 URL
+
 
 eagle.onPluginCreate(async (plugin) => {
   console.log("Plugin Created:", plugin);
-  eagle.window.setResizable(false);
+
   // 1. 获取选中的图片
   globalSelection = plugin.selection;
   if (!globalSelection || globalSelection.length === 0) {
@@ -31,7 +34,8 @@ eagle.onPluginCreate(async (plugin) => {
   await eagle.window.show();
 });
 eagle.window.setSize(700,620); // 限制最小宽度高度
-
+eagle.window.setResizable(false); // 禁止调整窗口大小
+eagle.window.setAlwaysOnTop(true); // 置顶窗口
 eagle.onPluginShow(async () => {
   console.log("Plugin Show");
 
@@ -128,23 +132,32 @@ eagle.onPluginShow(async () => {
       applyBackgroundStyle(box, "", selectedFillMode);
 
       // 点击切换选择状态
-      box.addEventListener("click", () => {
-        const found = selectedDisplays.find(d => d.id === display.id);
-        if (found) {
-          // 取消选中
-          selectedDisplays = selectedDisplays.filter(d => d.id !== display.id);
-          box.classList.remove("selected");
-          applyBackgroundStyle(box, "", selectedFillMode);
-        } else {
-          // 选中
-          selectedDisplays.push(display);
-          box.classList.add("selected");
-          if (cachedPreviewUrl) {
-            applyBackgroundStyle(box, cachedPreviewUrl, selectedFillMode);
-          }
-        }
-        console.log("选中显示器:", selectedDisplays.map(d => d.id));
-      });
+	  box.addEventListener("click", () => {
+		const found = selectedDisplays.find(d => d.id === display.id);
+		if (found) {
+		  // 取消选中：同时清除最后激活记录（如果就是当前显示器）
+		  selectedDisplays = selectedDisplays.filter(d => d.id !== display.id);
+		  box.classList.remove("selected");
+		  applyBackgroundStyle(box, "", selectedFillMode);
+		  if (lastActivatedMonitor === box) {
+			lastActivatedMonitor = null;
+		  }
+		} else {
+		  // 选中：记录当前显示器的本地预览为全局缓存时的预览图
+		  selectedDisplays.push(display);
+		  box.classList.add("selected");
+		  // 记录本地预览图，不再实时刷新，保持当时的图片
+		  box.loadedPreviewUrl = cachedPreviewUrl;
+		  // 更新全局最后激活显示器
+		  lastActivatedMonitor = box;
+		  // 使用本地预览加载背景
+		  if (cachedPreviewUrl) {
+			applyBackgroundStyle(box, cachedPreviewUrl, selectedFillMode);
+		  }
+		}
+		console.log("选中显示器:", selectedDisplays.map(d => d.id));
+	  });
+	  
 
       monitorsMap.appendChild(box);
     });
@@ -153,11 +166,15 @@ eagle.onPluginShow(async () => {
     toolbar.classList.remove("hidden");
 
     // 监听填充方式变化
-    fillModeSelect.addEventListener("change", (e) => {
-      selectedFillMode = e.target.value;
-      console.log("填充方式:", selectedFillMode);
-      refreshAllSelectedBoxes();
-    });
+	fillModeSelect.addEventListener("change", (e) => {
+		selectedFillMode = e.target.value;
+		console.log("填充方式:", selectedFillMode);
+		// 只更新最后激活显示器，如果存在的话
+		if (lastActivatedMonitor && lastActivatedMonitor.loadedPreviewUrl) {
+		  applyBackgroundStyle(lastActivatedMonitor, lastActivatedMonitor.loadedPreviewUrl, selectedFillMode);
+		}
+	  });
+	  
 
     // 确认按钮 -> 调用 wallpaper.set() 设置真实系统壁纸
     confirmBtn.onclick = async () => {
@@ -206,29 +223,31 @@ eagle.onPluginShow(async () => {
 
   // 在 onPluginShow() 最后，添加轮询代码
   let currentSelectionId = null; // 用于记录当前选中的文件ID
-  let cachedPreviewUrl = previewUrl; // 将当前预览 URL 缓存到全局变量中
-
+  // 初始化缓存（第一次取 previewUrl 作为缓存）
+  cachedPreviewUrl = previewUrl; 
+  
   const pollingTimer = setInterval(async () => {
-  let items = await eagle.item.getSelected();
-  if (items && items.length > 0) {
-    let newItem = items[0];
-    if (!currentSelectionId || newItem.id !== currentSelectionId) {
-    currentSelectionId = newItem.id;
-    globalSelection = items;
-    console.log("检测到选中项变化，新图片：", newItem);
-
-    let newPreviewUrl = newItem.thumbnailURL || newItem.fileURL;
-    if (!newPreviewUrl && newItem.filePath) {
-      newPreviewUrl = "file://" + newItem.filePath;
-    }
-    if (newPreviewUrl) {
-      // 更新缓存，但不直接刷新已经激活的显示器
-      cachedPreviewUrl = newPreviewUrl;
-      console.log("更新预览缓存为：", cachedPreviewUrl);
-    }
-    }
-  }
+	let items = await eagle.item.getSelected();
+	if (items && items.length > 0) {
+	  let newItem = items[0];
+	  if (!currentSelectionId || newItem.id !== currentSelectionId) {
+		currentSelectionId = newItem.id;
+		globalSelection = items;
+		console.log("检测到选中项变化，新图片：", newItem);
+		
+		let newPreviewUrl = newItem.thumbnailURL || newItem.fileURL;
+		if (!newPreviewUrl && newItem.filePath) {
+		  newPreviewUrl = "file://" + newItem.filePath;
+		}
+		if (newPreviewUrl) {
+		  // 只更新全局缓存，不刷新已激活显示器
+		  cachedPreviewUrl = newPreviewUrl;
+		  console.log("更新预览缓存为：", cachedPreviewUrl);
+		}
+	  }
+	}
   }, 1000);
+  
 
   // 如果窗口关闭时需要清除定时器，记得调用 clearInterval(pollingTimer);
 
@@ -240,59 +259,51 @@ eagle.onPluginShow(async () => {
  * 根据 fillMode 改变 box 的 background 样式
  ************************************************************/
 function applyBackgroundStyle(boxElement, bgUrl, fillMode) {
-    if (!bgUrl) {
-      boxElement.style.backgroundImage = "none";
-      return;
-    }
-    boxElement.style.backgroundImage = `url("${bgUrl}")`;
-    boxElement.style.backgroundPosition = "center";
-    
-    // **动态计算图片的适应方式**
-    const monitorWidth = boxElement.clientWidth;
-    const monitorHeight = boxElement.clientHeight;
-    const image = new Image();
-  
-    image.onload = () => {
-      const imageWidth = image.naturalWidth;
-      const imageHeight = image.naturalHeight;
-      
-      const monitorAspectRatio = monitorWidth / monitorHeight; // 显示器宽高比
-      const imageAspectRatio = imageWidth / imageHeight; // 图片宽高比
-  
-      switch (fillMode) {
-        case "fill":
-          // **保持宽高比，保证图片完整可见，可能有空白区域**
-          if (imageAspectRatio > monitorAspectRatio) {
-            boxElement.style.backgroundSize = "auto 100%"; // 高度填满，宽度自动缩小
-          } else {
-            boxElement.style.backgroundSize = "100% auto"; // 宽度填满，高度自动缩小
-          }
-          boxElement.style.backgroundRepeat = "no-repeat";
-          break;
-        case "stretch":
-          // **强制拉伸，完全覆盖**
-          boxElement.style.backgroundSize = "100% 100%";
-          boxElement.style.backgroundRepeat = "no-repeat";
-          break;
-        case "center":
-          // **图片保持原始大小，居中**
-          boxElement.style.backgroundSize = "auto";
-          boxElement.style.backgroundRepeat = "no-repeat";
-          break;
-        case "tile":
-          // **原始大小平铺**
-          boxElement.style.backgroundSize = "auto";
-          boxElement.style.backgroundRepeat = "repeat";
-          break;
-        default:
-          boxElement.style.backgroundSize = "cover";
-          boxElement.style.backgroundRepeat = "no-repeat";
-          break;
-      }
-    };
-  
-    image.src = bgUrl;
+  if (!bgUrl) {
+    boxElement.style.backgroundImage = "none";
+    return;
   }
+  boxElement.style.backgroundImage = `url("${bgUrl}")`;
+  boxElement.style.backgroundPosition = "center";
+  
+  switch (fillMode) {
+    case "fill":
+    // 宽度 100%，高度自动（可能裁剪上下）
+    boxElement.style.backgroundSize = "100% auto";
+    boxElement.style.backgroundRepeat = "no-repeat";
+    break;
+    case "stretch":
+    // 强制拉伸到 100% 100%
+    boxElement.style.backgroundSize = "100% 100%";
+    boxElement.style.backgroundRepeat = "no-repeat";
+    break;
+    case "fit":
+    // 使用 contain 保证图片全部显示（可能有留白）
+    boxElement.style.backgroundSize = "contain";
+    boxElement.style.backgroundRepeat = "no-repeat";
+    break;
+    case "center":
+    // 保持原始大小，居中显示
+    boxElement.style.backgroundSize = "auto";
+    boxElement.style.backgroundRepeat = "no-repeat";
+    break;
+    case "tile":
+    // 原始大小平铺
+    boxElement.style.backgroundSize = "auto";
+    boxElement.style.backgroundRepeat = "repeat";
+    break;
+    case "span":
+    // 跨区模式：这里简化实现为 cover（自动裁剪），实际可能需要根据虚拟桌面尺寸计算
+    boxElement.style.backgroundSize = "cover";
+    boxElement.style.backgroundRepeat = "no-repeat";
+    break;
+    default:
+    boxElement.style.backgroundSize = "cover";
+    boxElement.style.backgroundRepeat = "no-repeat";
+    break;
+  }
+  }
+  
   
 
 

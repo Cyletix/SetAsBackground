@@ -165,10 +165,12 @@
       <div class="fill-mode">
         <label for="fillModeSelect"><strong>填充方式:</strong></label>
         <select id="fillModeSelect">
-          <option value="fill" selected>填充(cover)</option>
+          <option value="fill" selected>填充(宽100%)</option>
           <option value="stretch">拉伸(100% 100%)</option>
-          <option value="center">居中(auto)</option>
-          <option value="tile">平铺(repeat)</option>
+          <option value="fit">适应</option>
+          <option value="center">居中(原图)</option>
+          <option value="tile">平铺(原图)</option>
+          <option value="span">跨区</option>
         </select>
       </div>
       <div class="buttons">
@@ -176,6 +178,7 @@
         <button id="cancelBtn" class="cancel-btn">取 消</button>
       </div>
     </div>
+    
 
   </div>
 </body>
