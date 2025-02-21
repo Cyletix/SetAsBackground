@@ -13,7 +13,7 @@ let globalSelection = [];
 
 eagle.onPluginCreate(async (plugin) => {
   console.log("Plugin Created:", plugin);
-
+  eagle.window.setResizable(false);
   // 1. 获取选中的图片
   globalSelection = plugin.selection;
   if (!globalSelection || globalSelection.length === 0) {
